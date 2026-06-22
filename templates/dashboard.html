@@ -1,0 +1,214 @@
+{% extends "base.html" %}
+{% block title %}Dashboard — Spectrum Payment Center{% endblock %}
+
+{% block topbar_title %}<span class="topbar-title">Dashboard</span>{% endblock %}
+
+{% block extra_head %}
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+{% endblock %}
+
+{% block content %}
+<div class="page-header">
+  <h1>Dashboard</h1>
+  <p class="page-subtitle">Real-time payment monitoring</p>
+</div>
+
+<!-- Stats Row 1 -->
+<div class="stats-grid">
+  <div class="stat-card stat-blue">
+    <div class="stat-icon"><i class="fas fa-dollar-sign"></i></div>
+    <div class="stat-body">
+      <div class="stat-value" id="stat-today">{{ stats.total_today | currency }}</div>
+      <div class="stat-label">Collected Today</div>
+    </div>
+  </div>
+  <div class="stat-card stat-indigo">
+    <div class="stat-icon"><i class="fas fa-calendar-alt"></i></div>
+    <div class="stat-body">
+      <div class="stat-value" id="stat-month">{{ stats.total_month | currency }}</div>
+      <div class="stat-label">Collected This Month</div>
+    </div>
+  </div>
+  <div class="stat-card stat-green">
+    <div class="stat-icon"><i class="fas fa-check-circle"></i></div>
+    <div class="stat-body">
+      <div class="stat-value" id="stat-paid">{{ stats.status_counts.PAID }}</div>
+      <div class="stat-label">Paid</div>
+    </div>
+  </div>
+  <div class="stat-card stat-yellow">
+    <div class="stat-icon"><i class="fas fa-clock"></i></div>
+    <div class="stat-body">
+      <div class="stat-value" id="stat-pending">{{ (stats.status_counts.PENDING or 0) + (stats.status_counts.SMS_SENT or 0) + (stats.status_counts.OPENED or 0) + (stats.status_counts.PROCESSING or 0) }}</div>
+      <div class="stat-label">Pending</div>
+    </div>
+  </div>
+  <div class="stat-card stat-red">
+    <div class="stat-icon"><i class="fas fa-times-circle"></i></div>
+    <div class="stat-body">
+      <div class="stat-value" id="stat-expired">{{ stats.status_counts.EXPIRED }}</div>
+      <div class="stat-label">Expired</div>
+    </div>
+  </div>
+  <div class="stat-card stat-gray">
+    <div class="stat-icon"><i class="fas fa-door-open"></i></div>
+    <div class="stat-body">
+      <div class="stat-value" id="stat-abandoned">{{ stats.status_counts.ABANDONED }}</div>
+      <div class="stat-label">Abandoned</div>
+    </div>
+  </div>
+</div>
+
+<!-- Conversion Stats -->
+<div class="conversion-row">
+  <div class="conversion-card">
+    <span class="conv-label"><i class="fas fa-paper-plane"></i> Sent</span>
+    <span class="conv-value" id="conv-sent">{{ stats.total_sent }}</span>
+  </div>
+  <div class="conv-arrow"><i class="fas fa-arrow-right"></i></div>
+  <div class="conversion-card">
+    <span class="conv-label"><i class="fas fa-eye"></i> Opened</span>
+    <span class="conv-value" id="conv-opened">{{ stats.total_opened }}</span>
+  </div>
+  <div class="conv-arrow"><i class="fas fa-arrow-right"></i></div>
+  <div class="conversion-card">
+    <span class="conv-label"><i class="fas fa-check"></i> Paid</span>
+    <span class="conv-value" id="conv-paid">{{ stats.total_paid }}</span>
+  </div>
+  <div class="conv-arrow"><i class="fas fa-arrow-right"></i></div>
+  <div class="conversion-card highlight">
+    <span class="conv-label"><i class="fas fa-percent"></i> Conversion</span>
+    <span class="conv-value" id="conv-rate">{{ stats.conversion_rate }}%</span>
+  </div>
+</div>
+
+<!-- Charts -->
+<div class="charts-grid">
+  <div class="chart-card">
+    <div class="chart-header">
+      <h3><i class="fas fa-chart-bar"></i> Payments by Hour (Today)</h3>
+    </div>
+    <div class="chart-body">
+      <canvas id="hourlyChart"></canvas>
+    </div>
+  </div>
+  <div class="chart-card">
+    <div class="chart-header">
+      <h3><i class="fas fa-chart-pie"></i> Status Distribution</h3>
+    </div>
+    <div class="chart-body">
+      <canvas id="statusChart"></canvas>
+    </div>
+  </div>
+</div>
+
+<!-- Recent Payments -->
+<div class="section-card">
+  <div class="section-header">
+    <h3><i class="fas fa-history"></i> Recent Payments</h3>
+    <a href="/payments" class="btn btn-sm btn-outline">View All</a>
+  </div>
+  <div class="table-wrap">
+    <table class="data-table">
+      <thead>
+        <tr>
+          <th>Customer</th>
+          <th>Amount</th>
+          <th>Status</th>
+          <th>Agent</th>
+          <th>Created</th>
+          <th>Expires</th>
+          <th></th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for p in recent_payments %}
+        <tr>
+          <td>
+            <div class="customer-cell">
+              <span class="customer-name">{{ p.customer_name }}</span>
+              <span class="customer-phone">{{ p.phone_number | phone }}</span>
+            </div>
+          </td>
+          <td><strong>{{ p.amount | currency }}</strong></td>
+          <td><span class="badge badge-{{ p.status | lower }}">{{ p.status }}</span></td>
+          <td>{{ p.agent_name or '—' }}</td>
+          <td>{{ p.created_at | dt }}</td>
+          <td>{{ p.expires_at | dt }}</td>
+          <td>
+            {% if p.status not in ['PAID', 'CANCELLED', 'EXPIRED'] %}
+            <button class="btn btn-xs btn-danger" onclick="cancelPayment('{{ p.id }}')">Cancel</button>
+            {% endif %}
+          </td>
+        </tr>
+        {% else %}
+        <tr><td colspan="7" class="empty-row">No payments yet.</td></tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</div>
+{% endblock %}
+
+{% block extra_scripts %}
+<script type="application/json" id="hourly-data">{{ stats.hourly_data | tojson }}</script>
+<script type="application/json" id="status-counts">{{ stats.status_counts | tojson }}</script>
+<script>
+const hourlyData = JSON.parse(document.getElementById('hourly-data').textContent);
+const statusCounts = JSON.parse(document.getElementById('status-counts').textContent);
+
+document.addEventListener('DOMContentLoaded', () => {
+  // Hourly chart
+  const hourCtx = document.getElementById('hourlyChart').getContext('2d');
+  new Chart(hourCtx, {
+    type: 'bar',
+    data: {
+      labels: hourlyData.map(d => d.hour),
+      datasets: [
+        { label: 'Created', data: hourlyData.map(d => d.created), backgroundColor: 'rgba(0, 116, 204, 0.6)', borderColor: '#0074cc', borderWidth: 1 },
+        { label: 'Paid', data: hourlyData.map(d => d.paid), backgroundColor: 'rgba(16, 185, 129, 0.6)', borderColor: '#10B981', borderWidth: 1 },
+      ]
+    },
+    options: { responsive: true, plugins: { legend: { position: 'top' } }, scales: { y: { beginAtZero: true, ticks: { stepSize: 1 } } } }
+  });
+
+  // Status donut chart
+  const statusCtx = document.getElementById('statusChart').getContext('2d');
+  const statusColors = { PAID: '#10B981', PENDING: '#F59E0B', SMS_SENT: '#3B82F6', OPENED: '#6366F1', PROCESSING: '#8B5CF6', FAILED: '#EF4444', EXPIRED: '#94A3B8', ABANDONED: '#64748B', CANCELLED: '#1E293B' };
+  const labels = Object.keys(statusCounts).filter(k => statusCounts[k] > 0);
+  new Chart(statusCtx, {
+    type: 'doughnut',
+    data: {
+      labels,
+      datasets: [{ data: labels.map(k => statusCounts[k]), backgroundColor: labels.map(k => statusColors[k] || '#94A3B8'), borderWidth: 2, borderColor: '#1E293B' }]
+    },
+    options: { responsive: true, plugins: { legend: { position: 'right' } } }
+  });
+});
+
+async function cancelPayment(id) {
+  if (!confirm('Cancel this payment request?')) return;
+  const res = await fetch(`/api/payments/${id}/cancel`, { method: 'POST' });
+  if (res.ok) location.reload();
+  else alert('Could not cancel this payment.');
+}
+
+// Live polling
+setInterval(async () => {
+  try {
+    const res = await fetch('/api/stats');
+    const s = await res.json();
+    document.getElementById('stat-today').textContent = '$' + s.total_today.toLocaleString('en-US', {minimumFractionDigits:2});
+    document.getElementById('stat-month').textContent = '$' + s.total_month.toLocaleString('en-US', {minimumFractionDigits:2});
+    document.getElementById('stat-paid').textContent = s.status_counts.PAID;
+    document.getElementById('stat-pending').textContent = (s.status_counts.PENDING||0)+(s.status_counts.SMS_SENT||0)+(s.status_counts.OPENED||0)+(s.status_counts.PROCESSING||0);
+    document.getElementById('stat-expired').textContent = s.status_counts.EXPIRED;
+    document.getElementById('stat-abandoned').textContent = s.status_counts.ABANDONED;
+    document.getElementById('conv-sent').textContent = s.total_sent;
+    document.getElementById('conv-opened').textContent = s.total_opened;
+    document.getElementById('conv-paid').textContent = s.total_paid;
+    document.getElementById('conv-rate').textContent = s.conversion_rate + '%';
+  } catch(e) {}
+}, 10000);
+</script>
+{% endblock %}

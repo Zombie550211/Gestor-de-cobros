@@ -1,0 +1,121 @@
+{% extends "base.html" %}
+{% block title %}New Payment — Spectrum Payment Center{% endblock %}
+{% block topbar_title %}<span class="topbar-title">New Payment</span>{% endblock %}
+
+{% block content %}
+<div class="page-header">
+  <h1>Create Payment Request</h1>
+  <p class="page-subtitle">Generate a secure payment link and send it via SMS</p>
+</div>
+
+<div class="form-card">
+  <div id="alert-box" class="alert hidden"></div>
+
+  <form id="paymentForm" novalidate>
+    <div class="form-row">
+      <div class="form-group">
+        <label class="form-label" for="customer_name">
+          <i class="fas fa-user"></i> Customer Name <span class="required">*</span>
+        </label>
+        <input type="text" id="customer_name" name="customer_name" class="form-control"
+               placeholder="John Smith" required autocomplete="off" />
+        <span class="field-error" id="err-name"></span>
+      </div>
+      <div class="form-group">
+        <label class="form-label" for="phone_number">
+          <i class="fas fa-phone"></i> Phone Number (USA) <span class="required">*</span>
+        </label>
+        <input type="tel" id="phone_number" name="phone_number" class="form-control"
+               placeholder="(555) 000-0000" required autocomplete="off" />
+        <span class="field-error" id="err-phone"></span>
+      </div>
+    </div>
+
+    <div class="form-row">
+      <div class="form-group">
+        <label class="form-label" for="amount">
+          <i class="fas fa-dollar-sign"></i> Amount <span class="required">*</span>
+        </label>
+        <div class="input-prefix-wrap">
+          <span class="input-prefix">$</span>
+          <input type="number" id="amount" name="amount" class="form-control with-prefix"
+                 placeholder="0.00" step="0.01" min="1" required />
+        </div>
+        <span class="field-error" id="err-amount"></span>
+      </div>
+      <div class="form-group">
+        <label class="form-label" for="expires_in_minutes">
+          <i class="fas fa-clock"></i> Link Expires In <span class="required">*</span>
+        </label>
+        <select id="expires_in_minutes" name="expires_in_minutes" class="form-control" required>
+          <option value="">— Select expiry —</option>
+          <option value="15">15 minutes</option>
+          <option value="30">30 minutes</option>
+          <option value="60" selected>1 hour</option>
+          <option value="120">2 hours</option>
+          <option value="240">4 hours</option>
+          <option value="480">8 hours</option>
+          <option value="1440">24 hours</option>
+        </select>
+        <span class="field-error" id="err-expires"></span>
+      </div>
+    </div>
+
+    <div class="form-group full-width">
+      <label class="form-label" for="description">
+        <i class="fas fa-file-alt"></i> Description <span class="required">*</span>
+      </label>
+      <textarea id="description" name="description" class="form-control" rows="3"
+                placeholder="e.g. Monthly internet service — Account #12345" required></textarea>
+      <span class="field-error" id="err-desc"></span>
+    </div>
+
+    <div class="form-group full-width">
+      <label class="form-label" for="agent_name">
+        <i class="fas fa-headset"></i> Agent Name
+      </label>
+      <input type="text" id="agent_name" name="agent_name" class="form-control"
+             placeholder="Your name" value="" />
+    </div>
+
+    <div class="sms-preview" id="smsPreview">
+      <div class="sms-header"><i class="fas fa-sms"></i> SMS Preview</div>
+      <div class="sms-bubble">
+        <p><strong>Spectrum Internet</strong></p>
+        <p>Hello <span id="prev-name">John</span>,</p>
+        <p>You have a secure payment request.</p>
+        <p>Amount: <strong id="prev-amount">$0.00</strong></p>
+        <p>Pay securely:<br /><span class="sms-link">https://pay.yourdomain.com/pay/XXXXXX</span></p>
+        <p>This payment link expires in <span id="prev-expires">1 hour</span>.</p>
+        <p>Thank you.</p>
+      </div>
+    </div>
+
+    <div class="form-actions">
+      <button type="submit" class="btn btn-primary btn-lg" id="submitBtn">
+        <i class="fas fa-paper-plane"></i>
+        <span>Generate &amp; Send Link</span>
+      </button>
+    </div>
+  </form>
+</div>
+
+<!-- Success Modal -->
+<div class="modal-overlay hidden" id="successModal">
+  <div class="modal-card">
+    <div class="modal-icon success"><i class="fas fa-check-circle"></i></div>
+    <h2>Payment Link Created!</h2>
+    <p>The link has been sent via SMS to the customer.</p>
+    <div class="modal-url" id="modal-url"></div>
+    <div class="modal-actions">
+      <button class="btn btn-outline" onclick="copyLink()"><i class="fas fa-copy"></i> Copy Link</button>
+      <a href="/" class="btn btn-primary">Back to Dashboard</a>
+      <button class="btn btn-secondary" onclick="resetForm()"><i class="fas fa-plus"></i> New Payment</button>
+    </div>
+  </div>
+</div>
+{% endblock %}
+
+{% block extra_scripts %}
+<script src="/static/js/create_payment.js"></script>
+{% endblock %}

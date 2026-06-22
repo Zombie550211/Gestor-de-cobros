@@ -1,0 +1,83 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Secure Payment — Spectrum Internet</title>
+  <link rel="stylesheet" href="/static/css/main.css" />
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css" />
+  <script src="https://js.stripe.com/v3/"></script>
+</head>
+<body class="pay-body">
+
+  <div class="pay-wrapper">
+    <div class="pay-card">
+
+      <!-- Header -->
+      <div class="pay-header">
+        <div class="pay-brand">
+          <div class="pay-brand-icon">S</div>
+          <div class="pay-brand-text">
+            <span>Spectrum</span>
+            <small>Internet Services</small>
+          </div>
+        </div>
+        <div class="pay-secure-badge">
+          <i class="fas fa-lock"></i> Secure Payment
+        </div>
+      </div>
+
+      <!-- Amount -->
+      <div class="pay-amount-section">
+        <div class="pay-amount">${{ "%.2f" | format(payment.amount | float) }}</div>
+        <div class="pay-description">{{ payment.description }}</div>
+        <div class="pay-customer">For: <strong>{{ payment.customer_name }}</strong></div>
+      </div>
+
+      <!-- Timer -->
+      <div class="pay-timer-wrap">
+        <i class="fas fa-hourglass-half"></i>
+        <span>Link expires in </span>
+        <span class="timer" id="countdown">--:--</span>
+      </div>
+
+      <!-- Stripe Elements -->
+      <div class="pay-form-section">
+        {% if processing %}
+        <div class="processing-msg">
+          <i class="fas fa-spinner fa-spin"></i>
+          Processing your payment…
+        </div>
+        {% else %}
+        <form id="payment-form">
+          <div class="stripe-element-wrap">
+            <div id="payment-element"></div>
+            <div id="payment-errors" class="stripe-error hidden"></div>
+          </div>
+          <button type="submit" id="pay-btn" class="pay-btn">
+            <span id="pay-btn-text"><i class="fas fa-lock"></i> Pay Now</span>
+            <span id="pay-btn-spinner" class="hidden"><i class="fas fa-spinner fa-spin"></i> Processing…</span>
+          </button>
+        </form>
+        {% endif %}
+      </div>
+
+      <!-- Footer -->
+      <div class="pay-footer">
+        <img src="https://cdn.brandfetch.io/stripe.com/w/512/h/512/logo" alt="Stripe" height="22" />
+        <span>Powered by Stripe. Your card info is never stored by us.</span>
+      </div>
+
+    </div>
+  </div>
+
+  <script>
+    const STRIPE_KEY = "{{ stripe_publishable_key }}";
+    const CLIENT_SECRET = "{{ payment.stripe_client_secret }}";
+    const RETURN_URL = "{{ return_url }}";
+    const TOKEN = "{{ payment.token }}";
+    const EXPIRES_AT = new Date("{{ payment.expires_at.isoformat() }}Z");
+  </script>
+  <script src="/static/js/pay.js"></script>
+</body>
+</html>

@@ -1,0 +1,26 @@
+# Secretos / variables de entorno — NUNCA subir a GitHub
+.env
+.env.*
+!.env.example
+
+# Base de datos local
+*.db
+*.sqlite
+*.sqlite3
+spectrum_payments.db
+
+# Python
+__pycache__/
+*.py[cod]
+*.pyc
+.venv/
+venv/
+env/
+*.egg-info/
+
+# Herramientas / Editores / SO
+.claude/
+.vscode/
+.idea/
+.DS_Store
+Thumbs.db

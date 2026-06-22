@@ -1,0 +1,45 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Link Unavailable — Spectrum Internet</title>
+  <link rel="stylesheet" href="/static/css/main.css" />
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css" />
+</head>
+<body class="pay-body">
+  <div class="pay-wrapper">
+    <div class="pay-card result-card">
+      <div class="result-icon expired-icon">
+        {% if reason == 'cancelled' %}
+        <i class="fas fa-ban"></i>
+        {% elif reason == 'not_found' %}
+        <i class="fas fa-search"></i>
+        {% else %}
+        <i class="fas fa-hourglass-end"></i>
+        {% endif %}
+      </div>
+
+      {% if reason == 'cancelled' %}
+      <h1 class="result-title">Payment Cancelled</h1>
+      <p class="result-subtitle">This payment request has been cancelled.</p>
+      {% elif reason == 'not_found' %}
+      <h1 class="result-title">Link Not Found</h1>
+      <p class="result-subtitle">This payment link does not exist or has already been used.</p>
+      {% else %}
+      <h1 class="result-title">Link Expired</h1>
+      <p class="result-subtitle">This payment link has expired and is no longer valid.</p>
+      {% endif %}
+
+      <p class="result-note">
+        If you need to make a payment, please contact a Spectrum representative to generate a new link.
+      </p>
+
+      <div class="pay-brand center-brand">
+        <div class="pay-brand-icon">S</div>
+        <span>Spectrum Internet Services</span>
+      </div>
+    </div>
+  </div>
+</body>
+</html>

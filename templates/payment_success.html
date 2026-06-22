@@ -1,0 +1,50 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Payment Successful — Spectrum Internet</title>
+  <link rel="stylesheet" href="/static/css/main.css" />
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css" />
+</head>
+<body class="pay-body">
+  <div class="pay-wrapper">
+    <div class="pay-card result-card">
+      <div class="result-icon success-icon">
+        <i class="fas fa-check-circle"></i>
+      </div>
+      <h1 class="result-title">Payment Successful!</h1>
+      <p class="result-subtitle">Your payment has been processed securely.</p>
+
+      {% if payment %}
+      <div class="result-details">
+        <div class="result-row">
+          <span>Amount Paid</span>
+          <strong>${{ "%.2f" | format(payment.amount | float) }}</strong>
+        </div>
+        <div class="result-row">
+          <span>Description</span>
+          <span>{{ payment.description }}</span>
+        </div>
+        {% if payment.paid_at %}
+        <div class="result-row">
+          <span>Date</span>
+          <span>{{ payment.paid_at.strftime('%B %d, %Y at %I:%M %p UTC') }}</span>
+        </div>
+        {% endif %}
+      </div>
+      {% endif %}
+
+      <p class="result-note">
+        <i class="fas fa-envelope"></i>
+        A confirmation will be sent to you. Thank you for choosing Spectrum Internet.
+      </p>
+
+      <div class="pay-brand center-brand">
+        <div class="pay-brand-icon">S</div>
+        <span>Spectrum Internet Services</span>
+      </div>
+    </div>
+  </div>
+</body>
+</html>

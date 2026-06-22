@@ -1,0 +1,103 @@
+{% extends "base.html" %}
+{% block title %}All Payments — Spectrum Payment Center{% endblock %}
+{% block topbar_title %}<span class="topbar-title">All Payments</span>{% endblock %}
+
+{% block content %}
+<div class="page-header">
+  <h1>All Payments</h1>
+  <p class="page-subtitle">{{ payments | length }} total records</p>
+  <a href="/payments/create" class="btn btn-primary">
+    <i class="fas fa-plus"></i> New Payment
+  </a>
+</div>
+
+<div class="section-card">
+  <div class="table-toolbar">
+    <input type="text" id="searchInput" class="form-control search-input" placeholder="Search by name, phone, token…" oninput="filterTable()" />
+    <select id="statusFilter" class="form-control filter-select" onchange="filterTable()">
+      <option value="">All statuses</option>
+      <option value="PENDING">Pending</option>
+      <option value="SMS_SENT">SMS Sent</option>
+      <option value="OPENED">Opened</option>
+      <option value="PROCESSING">Processing</option>
+      <option value="PAID">Paid</option>
+      <option value="FAILED">Failed</option>
+      <option value="EXPIRED">Expired</option>
+      <option value="ABANDONED">Abandoned</option>
+      <option value="CANCELLED">Cancelled</option>
+    </select>
+  </div>
+
+  <div class="table-wrap">
+    <table class="data-table" id="paymentsTable">
+      <thead>
+        <tr>
+          <th>Token</th>
+          <th>Customer</th>
+          <th>Amount</th>
+          <th>Status</th>
+          <th>Agent</th>
+          <th>Created</th>
+          <th>Expires</th>
+          <th>Paid At</th>
+          <th>Actions</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for p in payments %}
+        <tr data-status="{{ p.status }}" data-search="{{ p.customer_name | lower }} {{ p.phone_number }} {{ p.token | lower }} {{ (p.agent_name or '') | lower }}">
+          <td><code class="token-code">{{ p.token }}</code></td>
+          <td>
+            <div class="customer-cell">
+              <span class="customer-name">{{ p.customer_name }}</span>
+              <span class="customer-phone">{{ p.phone_number | phone }}</span>
+            </div>
+          </td>
+          <td><strong>{{ p.amount | currency }}</strong></td>
+          <td><span class="badge badge-{{ p.status | lower }}">{{ p.status }}</span></td>
+          <td>{{ p.agent_name or '—' }}</td>
+          <td class="nowrap">{{ p.created_at | dt }}</td>
+          <td class="nowrap">{{ p.expires_at | dt }}</td>
+          <td class="nowrap">{{ p.paid_at | dt }}</td>
+          <td>
+            <div class="action-btns">
+              {% if p.status not in ['PAID', 'CANCELLED', 'EXPIRED', 'FAILED'] %}
+              <a href="/pay/{{ p.token }}" target="_blank" class="btn btn-xs btn-outline" title="Open payment page">
+                <i class="fas fa-external-link-alt"></i>
+              </a>
+              <button class="btn btn-xs btn-danger" onclick="cancelPayment('{{ p.id }}')" title="Cancel">
+                <i class="fas fa-times"></i>
+              </button>
+              {% endif %}
+            </div>
+          </td>
+        </tr>
+        {% else %}
+        <tr><td colspan="9" class="empty-row">No payments found.</td></tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</div>
+{% endblock %}
+
+{% block extra_scripts %}
+<script>
+function filterTable() {
+  const q = document.getElementById('searchInput').value.toLowerCase();
+  const status = document.getElementById('statusFilter').value;
+  document.querySelectorAll('#paymentsTable tbody tr[data-status]').forEach(row => {
+    const matchSearch = !q || row.dataset.search.includes(q);
+    const matchStatus = !status || row.dataset.status === status;
+    row.style.display = matchSearch && matchStatus ? '' : 'none';
+  });
+}
+
+async function cancelPayment(id) {
+  if (!confirm('Cancel this payment request?')) return;
+  const res = await fetch(`/api/payments/${id}/cancel`, { method: 'POST' });
+  if (res.ok) location.reload();
+  else alert('Could not cancel this payment.');
+}
+</script>
+{% endblock %}
