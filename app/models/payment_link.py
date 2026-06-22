@@ -10,6 +10,7 @@ from app.database import Base
 class PaymentStatus(str, enum.Enum):
     PENDING = "PENDING"
     SMS_SENT = "SMS_SENT"
+    EMAIL_SENT = "EMAIL_SENT"
     OPENED = "OPENED"
     PROCESSING = "PROCESSING"
     PAID = "PAID"
@@ -27,7 +28,8 @@ class PaymentLink(Base):
     stripe_payment_intent_id = Column(String(255), nullable=True)
     stripe_client_secret = Column(String(500), nullable=True)
     customer_name = Column(String(255), nullable=False)
-    phone_number = Column(String(20), nullable=False)
+    customer_email = Column(String(255), nullable=True)
+    phone_number = Column(String(20), nullable=True)
     amount = Column(Numeric(10, 2), nullable=False)
     currency = Column(String(3), default="usd")
     description = Column(Text, nullable=False)

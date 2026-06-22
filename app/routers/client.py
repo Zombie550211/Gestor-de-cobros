@@ -46,7 +46,11 @@ async def payment_page(request: Request, token: str, db: Session = Depends(get_d
             {"request": request, "payment": payment, "reason": payment.status.lower()},
         )
 
-    if payment.status in [PaymentStatus.PENDING.value, PaymentStatus.SMS_SENT.value]:
+    if payment.status in [
+        PaymentStatus.PENDING.value,
+        PaymentStatus.SMS_SENT.value,
+        PaymentStatus.EMAIL_SENT.value,
+    ]:
         payment.status = PaymentStatus.OPENED.value
         payment.opened_at = datetime.utcnow()
         payment.client_ip = request.client.host if request.client else None

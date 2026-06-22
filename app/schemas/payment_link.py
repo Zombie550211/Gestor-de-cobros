@@ -3,12 +3,13 @@ from decimal import Decimal
 from typing import Optional
 from uuid import UUID
 
-from pydantic import BaseModel, ConfigDict, field_validator
+from pydantic import BaseModel, ConfigDict, EmailStr, field_validator
 
 
 class PaymentLinkCreate(BaseModel):
     customer_name: str
-    phone_number: str
+    customer_email: EmailStr
+    phone_number: Optional[str] = None
     amount: Decimal
     description: str
     expires_in_minutes: int
@@ -23,7 +24,9 @@ class PaymentLinkCreate(BaseModel):
 
     @field_validator("phone_number")
     @classmethod
-    def normalize_phone(cls, v: str) -> str:
+    def normalize_phone(cls, v: Optional[str]) -> Optional[str]:
+        if v is None or not v.strip():
+            return None
         digits = "".join(filter(str.isdigit, v))
         if len(digits) == 10:
             return f"+1{digits}"
@@ -45,7 +48,8 @@ class PaymentLinkResponse(BaseModel):
     id: UUID
     token: str
     customer_name: str
-    phone_number: str
+    customer_email: Optional[str] = None
+    phone_number: Optional[str] = None
     amount: Decimal
     currency: str
     description: str

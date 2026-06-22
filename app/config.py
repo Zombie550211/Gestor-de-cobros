@@ -9,6 +9,13 @@ class Settings(BaseSettings):
     TWILIO_ACCOUNT_SID: str = "placeholder_sid"
     TWILIO_AUTH_TOKEN: str = "placeholder_token"
     TWILIO_FROM_NUMBER: str = "+10000000000"
+    # Envío del link por correo (SMTP). Sirve para Gmail, Outlook, SendGrid, etc.
+    SMTP_HOST: str = "smtp.gmail.com"
+    SMTP_PORT: int = 587
+    SMTP_USER: str = ""
+    SMTP_PASSWORD: str = ""
+    FROM_EMAIL: str = ""
+    FROM_NAME: str = "Spectrum Internet"
     APP_URL: str = "http://localhost:8000"
     SECRET_KEY: str = "change-me-in-production"
 

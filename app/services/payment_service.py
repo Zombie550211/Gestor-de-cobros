@@ -7,6 +7,7 @@ from sqlalchemy.orm import Session
 from app.config import settings
 from app.models.payment_link import PaymentLink, PaymentStatus
 from app.schemas.payment_link import PaymentLinkCreate
+from app.services.email_service import send_payment_email
 from app.services.stripe_service import cancel_payment_intent, create_payment_intent
 from app.services.twilio_service import format_expires_in, send_payment_sms
 from app.utils.token import generate_token
@@ -32,6 +33,7 @@ async def create_payment(data: PaymentLinkCreate, db: Session) -> PaymentLink:
         stripe_payment_intent_id=stripe_data["id"],
         stripe_client_secret=stripe_data["client_secret"],
         customer_name=data.customer_name,
+        customer_email=data.customer_email,
         phone_number=data.phone_number,
         amount=data.amount,
         currency="usd",
@@ -46,15 +48,31 @@ async def create_payment(data: PaymentLinkCreate, db: Session) -> PaymentLink:
 
     payment_url = f"{settings.APP_URL}/pay/{token}"
     expires_in_text = format_expires_in(data.expires_in_minutes)
-    sms_sent = send_payment_sms(
-        to_number=data.phone_number,
+
+    # Canal principal: correo
+    email_sent = send_payment_email(
+        to_email=data.customer_email,
         customer_name=data.customer_name,
         amount=float(data.amount),
         payment_url=payment_url,
         expires_in=expires_in_text,
     )
 
-    if sms_sent:
+    # Canal secundario: SMS (solo si hay teléfono y Twilio configurado)
+    sms_sent = False
+    if data.phone_number:
+        sms_sent = send_payment_sms(
+            to_number=data.phone_number,
+            customer_name=data.customer_name,
+            amount=float(data.amount),
+            payment_url=payment_url,
+            expires_in=expires_in_text,
+        )
+
+    if email_sent:
+        payment_link.status = PaymentStatus.EMAIL_SENT.value
+        db.commit()
+    elif sms_sent:
         payment_link.status = PaymentStatus.SMS_SENT.value
         db.commit()
 
@@ -86,6 +104,7 @@ def expire_stale_payments(db: Session) -> None:
     active_statuses = [
         PaymentStatus.PENDING.value,
         PaymentStatus.SMS_SENT.value,
+        PaymentStatus.EMAIL_SENT.value,
         PaymentStatus.OPENED.value,
         PaymentStatus.PROCESSING.value,
     ]

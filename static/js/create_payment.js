@@ -3,6 +3,7 @@
 (function () {
   const form = document.getElementById('paymentForm');
   const nameEl = document.getElementById('customer_name');
+  const emailEl = document.getElementById('customer_email');
   const phoneEl = document.getElementById('phone_number');
   const amountEl = document.getElementById('amount');
   const expiresEl = document.getElementById('expires_in_minutes');
@@ -62,8 +63,13 @@
     if (!nameEl.value.trim()) { setError('err-name', 'Customer name is required'); valid = false; }
     else setError('err-name', '');
 
+    const emailRe = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    if (!emailRe.test(emailEl.value.trim())) { setError('err-email', 'Enter a valid email address'); valid = false; }
+    else setError('err-email', '');
+
+    // El teléfono es opcional; solo se valida si lo escriben
     const digits = phoneEl.value.replace(/\D/g, '');
-    if (digits.length !== 10) { setError('err-phone', 'Enter a valid 10-digit US number'); valid = false; }
+    if (digits.length > 0 && digits.length !== 10) { setError('err-phone', 'Enter a valid 10-digit US number'); valid = false; }
     else setError('err-phone', '');
 
     const amt = parseFloat(amountEl.value);
@@ -99,7 +105,8 @@
 
     const payload = {
       customer_name: nameEl.value.trim(),
-      phone_number: phoneEl.value,
+      customer_email: emailEl.value.trim(),
+      phone_number: phoneEl.value.trim() || null,
       amount: parseFloat(amountEl.value),
       description: descEl.value.trim(),
       expires_in_minutes: parseInt(expiresEl.value),
