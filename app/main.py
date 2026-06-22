@@ -3,14 +3,33 @@ from contextlib import asynccontextmanager
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles
+from sqlalchemy import text
 
 from app.database import Base, engine
 from app.routers import admin, api, client, webhooks
 
 
+def _run_light_migrations():
+    """Para bases ya existentes: agrega columnas nuevas sin borrar datos.
+    Idempotente y solo aplica en PostgreSQL."""
+    if engine.dialect.name != "postgresql":
+        return
+    statements = [
+        "ALTER TABLE payment_links ADD COLUMN IF NOT EXISTS customer_email VARCHAR(255)",
+        "ALTER TABLE payment_links ALTER COLUMN phone_number DROP NOT NULL",
+    ]
+    with engine.begin() as conn:
+        for stmt in statements:
+            try:
+                conn.execute(text(stmt))
+            except Exception as e:  # noqa: BLE001
+                print(f"[migration] omitido: {e}")
+
+
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     Base.metadata.create_all(bind=engine)
+    _run_light_migrations()
     yield
 
 
