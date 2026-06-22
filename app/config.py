@@ -14,6 +14,8 @@ class Settings(BaseSettings):
     SMTP_PORT: int = 587
     SMTP_USER: str = ""
     SMTP_PASSWORD: str = ""
+    # API HTTP de Brevo (recomendado en Render: usa puerto 443, no bloqueado)
+    BREVO_API_KEY: str = ""
     FROM_EMAIL: str = ""
     FROM_NAME: str = "Spectrum Internet"
     APP_URL: str = "http://localhost:8000"

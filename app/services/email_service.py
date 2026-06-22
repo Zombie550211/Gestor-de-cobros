@@ -1,31 +1,18 @@
 import smtplib
 from email.message import EmailMessage
 
+import httpx
+
 from app.config import settings
 
 
-def send_payment_email(
-    to_email: str,
-    customer_name: str,
-    amount: float,
-    payment_url: str,
-    expires_in: str,
-) -> bool:
-    """Envía el link de pago por correo (SMTP). Devuelve True si se envió."""
-    if not settings.SMTP_USER or not settings.SMTP_PASSWORD:
-        print("[Email] SMTP no configurado (SMTP_USER/SMTP_PASSWORD vacíos)")
-        return False
+def _build_subject(amount: float) -> str:
+    return f"Secure payment request — ${amount:.2f}"
 
+
+def _build_text(customer_name: str, amount: float, payment_url: str, expires_in: str) -> str:
     first_name = customer_name.split()[0] if customer_name else "Customer"
-    from_email = settings.FROM_EMAIL or settings.SMTP_USER
-
-    msg = EmailMessage()
-    msg["Subject"] = f"Secure payment request — ${amount:.2f}"
-    msg["From"] = f"{settings.FROM_NAME} <{from_email}>"
-    msg["To"] = to_email
-
-    # Versión de texto plano (respaldo)
-    msg.set_content(
+    return (
         f"{settings.FROM_NAME}\n\n"
         f"Hello {first_name},\n\n"
         f"You have a secure payment request.\n\n"
@@ -35,9 +22,10 @@ def send_payment_email(
         f"Thank you."
     )
 
-    # Versión HTML con botón
-    msg.add_alternative(
-        f"""\
+
+def _build_html(customer_name: str, amount: float, payment_url: str, expires_in: str) -> str:
+    first_name = customer_name.split()[0] if customer_name else "Customer"
+    return f"""\
 <html>
   <body style="margin:0;padding:0;background:#f4f6f9;font-family:Arial,Helvetica,sans-serif;">
     <table width="100%" cellpadding="0" cellspacing="0" style="background:#f4f6f9;padding:24px 0;">
@@ -71,10 +59,48 @@ def send_payment_email(
       </td></tr>
     </table>
   </body>
-</html>""",
-        subtype="html",
-    )
+</html>"""
 
+
+def _send_via_brevo_api(to_email, customer_name, amount, payment_url, expires_in) -> bool:
+    """Envía por la API HTTP de Brevo (puerto 443 — nunca bloqueado por Render)."""
+    from_email = settings.FROM_EMAIL or settings.SMTP_USER
+    payload = {
+        "sender": {"name": settings.FROM_NAME, "email": from_email},
+        "to": [{"email": to_email, "name": customer_name}],
+        "subject": _build_subject(amount),
+        "htmlContent": _build_html(customer_name, amount, payment_url, expires_in),
+        "textContent": _build_text(customer_name, amount, payment_url, expires_in),
+    }
+    try:
+        resp = httpx.post(
+            "https://api.brevo.com/v3/smtp/email",
+            headers={
+                "api-key": settings.BREVO_API_KEY,
+                "accept": "application/json",
+                "content-type": "application/json",
+            },
+            json=payload,
+            timeout=20,
+        )
+        if resp.status_code in (200, 201):
+            return True
+        print(f"[Email] Brevo API rechazó ({resp.status_code}): {resp.text}")
+        return False
+    except Exception as e:  # noqa: BLE001
+        print(f"[Email] Error API Brevo: {e}")
+        return False
+
+
+def _send_via_smtp(to_email, customer_name, amount, payment_url, expires_in) -> bool:
+    """Respaldo: envío por SMTP (no funciona en Render por bloqueo de puertos)."""
+    from_email = settings.FROM_EMAIL or settings.SMTP_USER
+    msg = EmailMessage()
+    msg["Subject"] = _build_subject(amount)
+    msg["From"] = f"{settings.FROM_NAME} <{from_email}>"
+    msg["To"] = to_email
+    msg.set_content(_build_text(customer_name, amount, payment_url, expires_in))
+    msg.add_alternative(_build_html(customer_name, amount, payment_url, expires_in), subtype="html")
     try:
         with smtplib.SMTP(settings.SMTP_HOST, settings.SMTP_PORT, timeout=20) as server:
             server.starttls()
@@ -82,5 +108,21 @@ def send_payment_email(
             server.send_message(msg)
         return True
     except Exception as e:  # noqa: BLE001
-        print(f"[Email] Error al enviar: {e}")
+        print(f"[Email] Error SMTP: {e}")
         return False
+
+
+def send_payment_email(
+    to_email: str,
+    customer_name: str,
+    amount: float,
+    payment_url: str,
+    expires_in: str,
+) -> bool:
+    """Envía el link de pago por correo. Prioriza la API HTTP de Brevo si hay API key."""
+    if settings.BREVO_API_KEY:
+        return _send_via_brevo_api(to_email, customer_name, amount, payment_url, expires_in)
+    if settings.SMTP_USER and settings.SMTP_PASSWORD:
+        return _send_via_smtp(to_email, customer_name, amount, payment_url, expires_in)
+    print("[Email] No configurado: falta BREVO_API_KEY o credenciales SMTP")
+    return False
