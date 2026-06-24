@@ -17,9 +17,11 @@ class PaymentLinkCreate(BaseModel):
 
     @field_validator("amount")
     @classmethod
-    def amount_must_be_positive(cls, v: Decimal) -> Decimal:
+    def amount_in_range(cls, v: Decimal) -> Decimal:
         if v <= 0:
             raise ValueError("Amount must be positive")
+        if v > Decimal("50000"):
+            raise ValueError("Amount cannot exceed $50,000")
         return v
 
     @field_validator("phone_number")
@@ -39,6 +41,20 @@ class PaymentLinkCreate(BaseModel):
     def valid_expiry(cls, v: int) -> int:
         if v < 5 or v > 10080:
             raise ValueError("Expiry must be between 5 minutes and 7 days")
+        return v
+
+
+class ActivityUpdate(BaseModel):
+    status: Optional[str] = None
+    time_spent: Optional[float] = None
+
+    @field_validator("time_spent")
+    @classmethod
+    def valid_time_spent(cls, v: Optional[float]) -> Optional[float]:
+        if v is None:
+            return None
+        if v < 0 or v > 86400:
+            raise ValueError("Invalid time_spent")
         return v
 
 

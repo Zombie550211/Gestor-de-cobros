@@ -9,6 +9,7 @@ from sqlalchemy.orm import Session
 from app.config import settings
 from app.database import get_db
 from app.models.payment_link import PaymentLink, PaymentStatus
+from app.services.stripe_service import retrieve_payment_intent_status
 
 router = APIRouter()
 
@@ -84,14 +85,20 @@ async def payment_result(request: Request, token: str, db: Session = Depends(get
             "payment_success.html", {"request": request, "payment": payment}
         )
 
+    # NUNCA confiar en el query param redirect_status para marcar PAID:
+    # es controlable por el cliente. Verificar el estado real con Stripe.
     redirect_status = request.query_params.get("redirect_status", "")
-    if redirect_status == "succeeded":
-        payment.status = PaymentStatus.PAID.value
-        payment.paid_at = datetime.utcnow()
-        db.commit()
-        return templates.TemplateResponse(
-            "payment_success.html", {"request": request, "payment": payment}
+    if redirect_status == "succeeded" and payment.stripe_payment_intent_id:
+        real_status = await retrieve_payment_intent_status(
+            payment.stripe_payment_intent_id
         )
+        if real_status == "succeeded":
+            payment.status = PaymentStatus.PAID.value
+            payment.paid_at = datetime.utcnow()
+            db.commit()
+            return templates.TemplateResponse(
+                "payment_success.html", {"request": request, "payment": payment}
+            )
 
     return templates.TemplateResponse(
         "pay.html",

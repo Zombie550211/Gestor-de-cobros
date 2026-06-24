@@ -3,7 +3,8 @@ from sqlalchemy.orm import Session
 
 from app.config import settings
 from app.database import get_db
-from app.schemas.payment_link import PaymentLinkCreate
+from app.schemas.payment_link import ActivityUpdate, PaymentLinkCreate
+from app.utils.auth import require_admin_api
 from app.services.payment_service import (
     cancel_payment,
     expire_stale_payments,
@@ -16,7 +17,7 @@ from app.services.payment_service import (
 router = APIRouter(prefix="/api")
 
 
-@router.post("/payments")
+@router.post("/payments", dependencies=[Depends(require_admin_api)])
 async def create_payment_endpoint(data: PaymentLinkCreate, db: Session = Depends(get_db)):
     try:
         payment = await create_payment(data, db)
@@ -27,10 +28,14 @@ async def create_payment_endpoint(data: PaymentLinkCreate, db: Session = Depends
             "status": payment.status,
         }
     except Exception as e:
-        raise HTTPException(status_code=500, detail=str(e))
+        # No exponer detalles internos al cliente; registrarlos en el servidor.
+        print(f"[api] Error creando pago: {e}")
+        raise HTTPException(
+            status_code=500, detail="Could not create the payment. Please try again."
+        )
 
 
-@router.get("/payments")
+@router.get("/payments", dependencies=[Depends(require_admin_api)])
 async def list_payments(db: Session = Depends(get_db)):
     expire_stale_payments(db)
     payments = get_all_payments(db)
@@ -50,7 +55,7 @@ async def list_payments(db: Session = Depends(get_db)):
     ]
 
 
-@router.post("/payments/{payment_id}/cancel")
+@router.post("/payments/{payment_id}/cancel", dependencies=[Depends(require_admin_api)])
 async def cancel_payment_endpoint(payment_id: str, db: Session = Depends(get_db)):
     success = await cancel_payment(payment_id, db)
     if not success:
@@ -58,15 +63,15 @@ async def cancel_payment_endpoint(payment_id: str, db: Session = Depends(get_db)
     return {"success": True}
 
 
-@router.get("/stats")
+@router.get("/stats", dependencies=[Depends(require_admin_api)])
 async def stats(db: Session = Depends(get_db)):
     return get_dashboard_stats(db)
 
 
 @router.post("/payments/{token}/activity")
-async def track_activity(token: str, body: dict, db: Session = Depends(get_db)):
+async def track_activity(token: str, body: ActivityUpdate, db: Session = Depends(get_db)):
     from datetime import datetime
-    from app.models.payment_link import PaymentLink, PaymentStatus
+    from app.models.payment_link import PaymentStatus
 
     payment = get_payment_by_token(token, db)
     if payment and payment.status not in [
@@ -75,9 +80,9 @@ async def track_activity(token: str, body: dict, db: Session = Depends(get_db)):
         PaymentStatus.CANCELLED.value,
     ]:
         payment.last_activity = datetime.utcnow()
-        if body.get("status") == "processing":
+        if body.status == "processing":
             payment.status = PaymentStatus.PROCESSING.value
-        if body.get("time_spent") is not None:
-            payment.time_spent = body["time_spent"]
+        if body.time_spent is not None:
+            payment.time_spent = body.time_spent
         db.commit()
     return {"ok": True}

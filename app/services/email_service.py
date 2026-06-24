@@ -48,8 +48,6 @@ def _build_html(customer_name: str, amount: float, payment_url: str, expires_in:
                 </a>
               </td></tr>
             </table>
-            <p style="font-size:13px;color:#6b7280;margin:0 0 6px;">Or copy this link:</p>
-            <p style="font-size:13px;color:#0a84ff;word-break:break-all;margin:0 0 18px;">{payment_url}</p>
             <p style="font-size:13px;color:#6b7280;margin:0;">This payment link expires in {expires_in}.</p>
           </td></tr>
           <tr><td style="background:#f4f6f9;padding:16px 28px;font-size:12px;color:#9ca3af;">

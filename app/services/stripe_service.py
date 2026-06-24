@@ -22,6 +22,15 @@ async def create_payment_intent(
     return {"id": intent.id, "client_secret": intent.client_secret}
 
 
+async def retrieve_payment_intent_status(payment_intent_id: str) -> str | None:
+    """Consulta el estado real del PaymentIntent en Stripe. None si falla."""
+    try:
+        intent = stripe.PaymentIntent.retrieve(payment_intent_id)
+        return intent.status
+    except stripe.error.StripeError:
+        return None
+
+
 async def cancel_payment_intent(payment_intent_id: str) -> bool:
     try:
         stripe.PaymentIntent.cancel(payment_intent_id)

@@ -11,8 +11,9 @@ from app.services.payment_service import (
     get_all_payments,
     get_dashboard_stats,
 )
+from app.utils.auth import require_admin_page
 
-router = APIRouter()
+router = APIRouter(dependencies=[Depends(require_admin_page)])
 
 _BASE_DIR = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 templates = Jinja2Templates(directory=os.path.join(_BASE_DIR, "templates"))

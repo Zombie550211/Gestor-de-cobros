@@ -17,9 +17,11 @@ class Settings(BaseSettings):
     # API HTTP de Brevo (recomendado en Render: usa puerto 443, no bloqueado)
     BREVO_API_KEY: str = ""
     FROM_EMAIL: str = ""
-    FROM_NAME: str = "Spectrum Internet"
+    FROM_NAME: str = "Secure Payment"
     APP_URL: str = "http://localhost:8000"
     SECRET_KEY: str = "change-me-in-production"
+    # Contraseña del panel de administración (cámbiala en producción vía .env)
+    ADMIN_PASSWORD: str = "change-me-admin"
 
     class Config:
         env_file = ".env"

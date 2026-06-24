@@ -27,7 +27,7 @@ def send_payment_sms(
         client = Client(settings.TWILIO_ACCOUNT_SID, settings.TWILIO_AUTH_TOKEN)
         first_name = customer_name.split()[0] if customer_name else "Customer"
         body = (
-            f"Spectrum Internet\n\n"
+            f"{settings.FROM_NAME}\n\n"
             f"Hello {first_name},\n\n"
             f"You have a secure payment request.\n\n"
             f"Amount: ${amount:.2f}\n\n"
