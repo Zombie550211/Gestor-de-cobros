@@ -33,10 +33,16 @@
     return;
   }
 
-  const stripe = Stripe(STRIPE_KEY);
+  const stripe = Stripe(STRIPE_KEY, { locale: 'en' });
   const elements = stripe.elements({ clientSecret: CLIENT_SECRET });
   const paymentElement = elements.create('payment', {
     layout: 'tabs',
+    // País predeterminado: Estados Unidos (+1) para el campo de teléfono/dirección.
+    defaultValues: {
+      billingDetails: {
+        address: { country: 'US' },
+      },
+    },
   });
   paymentElement.mount('#payment-element');
 
