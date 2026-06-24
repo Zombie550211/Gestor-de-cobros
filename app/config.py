@@ -16,6 +16,8 @@ class Settings(BaseSettings):
     SMTP_PASSWORD: str = ""
     # API HTTP de Brevo (recomendado en Render: usa puerto 443, no bloqueado)
     BREVO_API_KEY: str = ""
+    # API HTTP de SendGrid (puerto 443, funciona en Render; 100 correos/dia gratis)
+    SENDGRID_API_KEY: str = ""
     FROM_EMAIL: str = ""
     FROM_NAME: str = "Secure Payment"
     APP_URL: str = "http://localhost:8000"

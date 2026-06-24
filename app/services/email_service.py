@@ -90,6 +90,39 @@ def _send_via_brevo_api(to_email, customer_name, amount, payment_url, expires_in
         return False
 
 
+def _send_via_sendgrid(to_email, customer_name, amount, payment_url, expires_in) -> bool:
+    """Envía por la API HTTP de SendGrid (puerto 443 — funciona en Render)."""
+    from_email = settings.FROM_EMAIL or settings.SMTP_USER
+    payload = {
+        "personalizations": [
+            {"to": [{"email": to_email, "name": customer_name}]}
+        ],
+        "from": {"email": from_email, "name": settings.FROM_NAME},
+        "subject": _build_subject(amount),
+        "content": [
+            {"type": "text/plain", "value": _build_text(customer_name, amount, payment_url, expires_in)},
+            {"type": "text/html", "value": _build_html(customer_name, amount, payment_url, expires_in)},
+        ],
+    }
+    try:
+        resp = httpx.post(
+            "https://api.sendgrid.com/v3/mail/send",
+            headers={
+                "Authorization": f"Bearer {settings.SENDGRID_API_KEY}",
+                "Content-Type": "application/json",
+            },
+            json=payload,
+            timeout=20,
+        )
+        if resp.status_code in (200, 201, 202):
+            return True
+        print(f"[Email] SendGrid rechazó ({resp.status_code}): {resp.text}")
+        return False
+    except Exception as e:  # noqa: BLE001
+        print(f"[Email] Error API SendGrid: {e}")
+        return False
+
+
 def _send_via_smtp(to_email, customer_name, amount, payment_url, expires_in) -> bool:
     """Respaldo: envío por SMTP (no funciona en Render por bloqueo de puertos)."""
     from_email = settings.FROM_EMAIL or settings.SMTP_USER
@@ -117,10 +150,12 @@ def send_payment_email(
     payment_url: str,
     expires_in: str,
 ) -> bool:
-    """Envía el link de pago por correo. Prioriza la API HTTP de Brevo si hay API key."""
+    """Envía el link de pago por correo. Prioridad: SendGrid > Brevo > SMTP."""
+    if settings.SENDGRID_API_KEY:
+        return _send_via_sendgrid(to_email, customer_name, amount, payment_url, expires_in)
     if settings.BREVO_API_KEY:
         return _send_via_brevo_api(to_email, customer_name, amount, payment_url, expires_in)
     if settings.SMTP_USER and settings.SMTP_PASSWORD:
         return _send_via_smtp(to_email, customer_name, amount, payment_url, expires_in)
-    print("[Email] No configurado: falta BREVO_API_KEY o credenciales SMTP")
+    print("[Email] No configurado: falta SENDGRID_API_KEY, BREVO_API_KEY o credenciales SMTP")
     return False
