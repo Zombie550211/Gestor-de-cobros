@@ -1,3 +1,4 @@
+import base64
 import smtplib
 from email.message import EmailMessage
 
@@ -90,6 +91,60 @@ def _send_via_brevo_api(to_email, customer_name, amount, payment_url, expires_in
         return False
 
 
+def _get_gmail_access_token() -> str:
+    """Obtiene un access token temporal a partir del refresh token de Gmail."""
+    try:
+        resp = httpx.post(
+            "https://oauth2.googleapis.com/token",
+            data={
+                "client_id": settings.GMAIL_CLIENT_ID,
+                "client_secret": settings.GMAIL_CLIENT_SECRET,
+                "refresh_token": settings.GMAIL_REFRESH_TOKEN,
+                "grant_type": "refresh_token",
+            },
+            timeout=20,
+        )
+        if resp.status_code == 200:
+            return resp.json().get("access_token", "")
+        print(f"[Email] Gmail token error ({resp.status_code}): {resp.text}")
+        return ""
+    except Exception as e:  # noqa: BLE001
+        print(f"[Email] Error obteniendo token Gmail: {e}")
+        return ""
+
+
+def _send_via_gmail_api(to_email, customer_name, amount, payment_url, expires_in) -> bool:
+    """Envía por la API oficial de Gmail (puerto 443). Desde tu propia cuenta Gmail."""
+    token = _get_gmail_access_token()
+    if not token:
+        return False
+    from_email = settings.FROM_EMAIL or settings.SMTP_USER
+    msg = EmailMessage()
+    msg["Subject"] = _build_subject(amount)
+    msg["From"] = f"{settings.FROM_NAME} <{from_email}>"
+    msg["To"] = to_email
+    msg.set_content(_build_text(customer_name, amount, payment_url, expires_in))
+    msg.add_alternative(_build_html(customer_name, amount, payment_url, expires_in), subtype="html")
+    raw = base64.urlsafe_b64encode(msg.as_bytes()).decode()
+    try:
+        resp = httpx.post(
+            "https://gmail.googleapis.com/gmail/v1/users/me/messages/send",
+            headers={
+                "Authorization": f"Bearer {token}",
+                "Content-Type": "application/json",
+            },
+            json={"raw": raw},
+            timeout=20,
+        )
+        if resp.status_code in (200, 202):
+            return True
+        print(f"[Email] Gmail API rechazó ({resp.status_code}): {resp.text}")
+        return False
+    except Exception as e:  # noqa: BLE001
+        print(f"[Email] Error API Gmail: {e}")
+        return False
+
+
 def _send_via_sendgrid(to_email, customer_name, amount, payment_url, expires_in) -> bool:
     """Envía por la API HTTP de SendGrid (puerto 443 — funciona en Render)."""
     from_email = settings.FROM_EMAIL or settings.SMTP_USER
@@ -150,7 +205,9 @@ def send_payment_email(
     payment_url: str,
     expires_in: str,
 ) -> bool:
-    """Envía el link de pago por correo. Prioridad: SendGrid > Brevo > SMTP."""
+    """Envía el link de pago por correo. Prioridad: Gmail API > SendGrid > Brevo > SMTP."""
+    if settings.GMAIL_CLIENT_ID and settings.GMAIL_CLIENT_SECRET and settings.GMAIL_REFRESH_TOKEN:
+        return _send_via_gmail_api(to_email, customer_name, amount, payment_url, expires_in)
     if settings.SENDGRID_API_KEY:
         return _send_via_sendgrid(to_email, customer_name, amount, payment_url, expires_in)
     if settings.BREVO_API_KEY:

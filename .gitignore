@@ -3,6 +3,10 @@
 .env.*
 !.env.example
 
+# Credenciales OAuth de Gmail (NUNCA subir)
+client_secret.json
+token.json
+
 # Base de datos local
 *.db
 *.sqlite

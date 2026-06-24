@@ -18,6 +18,10 @@ class Settings(BaseSettings):
     BREVO_API_KEY: str = ""
     # API HTTP de SendGrid (puerto 443, funciona en Render; 100 correos/dia gratis)
     SENDGRID_API_KEY: str = ""
+    # API oficial de Gmail (OAuth2, puerto 443). Envia desde tu propia cuenta Gmail.
+    GMAIL_CLIENT_ID: str = ""
+    GMAIL_CLIENT_SECRET: str = ""
+    GMAIL_REFRESH_TOKEN: str = ""
     FROM_EMAIL: str = ""
     FROM_NAME: str = "Secure Payment"
     APP_URL: str = "http://localhost:8000"
