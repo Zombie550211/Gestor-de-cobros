@@ -1,0 +1,230 @@
+{% extends "base.html" %}
+{% block title %}Data Center — Secure Payment{% endblock %}
+{% block topbar_title %}<span class="topbar-title">Data Center</span>{% endblock %}
+
+{% block content %}
+<div class="page-header">
+  <h1>Data Center</h1>
+  <p class="page-subtitle">Saved customer cards — charge again without asking for the details</p>
+  <button class="btn btn-outline" id="backfillBtn" onclick="runBackfill()">
+    <i class="fas fa-cloud-arrow-down"></i>
+    <span id="backfillText">Recover past customers</span>
+  </button>
+</div>
+
+<div id="backfillAlert" class="alert hidden"></div>
+
+<div class="stats-grid">
+  <div class="stat-card stat-blue">
+    <div class="stat-icon"><i class="fas fa-id-card"></i></div>
+    <div class="stat-body">
+      <div class="stat-value">{{ cards | length }}</div>
+      <div class="stat-label">Saved Cards</div>
+    </div>
+  </div>
+  <div class="stat-card stat-green">
+    <div class="stat-icon"><i class="fas fa-dollar-sign"></i></div>
+    <div class="stat-body">
+      <div class="stat-value">{{ total_collected | currency }}</div>
+      <div class="stat-label">Total Collected</div>
+    </div>
+  </div>
+  <div class="stat-card stat-indigo">
+    <div class="stat-icon"><i class="fas fa-bolt"></i></div>
+    <div class="stat-body">
+      <div class="stat-value">{{ total_charges }}</div>
+      <div class="stat-label">Repeat Charges</div>
+    </div>
+  </div>
+</div>
+
+<div class="section-card">
+  <div class="table-toolbar">
+    <input type="text" id="searchInput" class="form-control search-input"
+           placeholder="Search by name, email, card…" oninput="filterCards()" />
+  </div>
+
+  <div class="table-wrap">
+    <table class="data-table" id="cardsTable">
+      <thead>
+        <tr>
+          <th>Customer</th>
+          <th>Card on File</th>
+          <th>Contact</th>
+          <th>Charges</th>
+          <th>Total Collected</th>
+          <th>Last Activity</th>
+          <th>Actions</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for card in cards %}
+        {% set p = card.payment %}
+        <tr data-search="{{ p.customer_name | lower }} {{ (p.customer_email or '') | lower }} {{ p.card_last4 or '' }} {{ (p.card_brand or '') | lower }}">
+          <td>
+            <div class="customer-cell">
+              <span class="customer-name">{{ p.customer_name }}</span>
+              <span class="customer-phone">{{ p.agent_name or '—' }}</span>
+            </div>
+          </td>
+          <td>
+            <div class="card-cell">
+              <i class="{{ p.card_brand | card_icon }} card-brand-icon"></i>
+              <div class="card-cell-body">
+                <span class="card-number">•••• {{ p.card_last4 or '····' }}</span>
+                <span class="card-meta">
+                  {{ p.card_brand | card_brand }}
+                  {%- if p.card_exp_month and p.card_exp_year %}
+                    · {{ '%02d' % p.card_exp_month }}/{{ p.card_exp_year }}
+                  {%- endif %}
+                  {%- if card.card_expired %}
+                    <span class="card-expired-tag">EXPIRED</span>
+                  {%- endif %}
+                </span>
+                {% if card.chargeable %}
+                <span class="card-status card-status-ok"
+                      title="The customer authorized saving this card, so it can be charged again.">
+                  <i class="fas fa-circle-check"></i> Chargeable
+                </span>
+                {% else %}
+                <span class="card-status card-status-locked"
+                      title="Recovered from history. Stripe does not allow reusing a card that was charged as a one-time payment.">
+                  <i class="fas fa-lock"></i> View only
+                </span>
+                {% endif %}
+              </div>
+            </div>
+          </td>
+          <td>
+            <div class="customer-cell">
+              <span>{{ p.customer_email or '—' }}</span>
+              <span class="customer-phone">{{ p.phone_number | phone or '—' }}</span>
+            </div>
+          </td>
+          <td>{{ card.charges_count }}</td>
+          <td><strong>{{ card.total_collected | currency }}</strong></td>
+          <td class="nowrap">{{ card.last_activity | dt }}</td>
+          <td>
+            <div class="action-btns">
+              {% if card.chargeable %}
+              <button class="btn btn-xs btn-primary"
+                      data-id="{{ p.id }}"
+                      data-name="{{ p.customer_name }}"
+                      data-brand="{{ p.card_brand | card_brand }}"
+                      data-last4="{{ p.card_last4 or '' }}"
+                      data-agent="{{ p.agent_name or '' }}"
+                      data-description="{{ p.description }}"
+                      onclick="openChargeModal(this)" title="Charge this card">
+                <i class="fas fa-bolt"></i> Cobro
+              </button>
+              {% else %}
+              <a class="btn btn-xs btn-outline"
+                 href="/payments/create?name={{ p.customer_name | urlencode }}&email={{ (p.customer_email or '') | urlencode }}&phone={{ (p.phone_number or '') | urlencode }}&agent={{ (p.agent_name or '') | urlencode }}"
+                 title="Send a new link with this customer's details already filled in — once they pay, the card is saved and Cobro works">
+                <i class="fas fa-paper-plane"></i> Send link
+              </a>
+              {% endif %}
+              <button class="btn btn-xs btn-outline"
+                      data-id="{{ p.id }}"
+                      onclick="openHistoryModal(this)" title="Charge history">
+                <i class="fas fa-clock-rotate-left"></i>
+              </button>
+            </div>
+          </td>
+        </tr>
+        {% else %}
+        <tr>
+          <td colspan="7" class="empty-row">
+            <i class="fas fa-id-card" style="font-size:2rem;display:block;margin-bottom:10px;opacity:.4"></i>
+            No saved cards yet.<br />
+            <span style="font-size:.82rem">
+              Cards appear here once a customer completes a payment link.<br />
+              Use <strong>Recover past customers</strong> to import the customers and
+              cards from your earlier Stripe payments.
+            </span>
+          </td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</div>
+
+<!-- Charge Modal -->
+<div class="modal-overlay hidden" id="chargeModal">
+  <div class="modal-card modal-form">
+    <button type="button" class="modal-close" onclick="closeChargeModal()" aria-label="Close">
+      <i class="fas fa-times"></i>
+    </button>
+    <h2><i class="fas fa-bolt"></i> New Charge</h2>
+
+    <div class="charge-target" id="chargeTarget"></div>
+    <div id="chargeAlert" class="alert hidden"></div>
+
+    <form id="chargeForm" novalidate>
+      <input type="hidden" id="chargePaymentId" />
+
+      <div class="form-group full-width">
+        <label class="form-label" for="chargeAmount">
+          <i class="fas fa-dollar-sign"></i> Amount <span class="required">*</span>
+        </label>
+        <div class="input-prefix-wrap">
+          <span class="input-prefix">$</span>
+          <input type="number" id="chargeAmount" class="form-control with-prefix"
+                 placeholder="0.00" step="0.01" min="0.5" max="50000" required />
+        </div>
+        <div class="quick-amounts">
+          <button type="button" class="amount-chip" onclick="setAmount(25)">$25</button>
+          <button type="button" class="amount-chip" onclick="setAmount(50)">$50</button>
+          <button type="button" class="amount-chip" onclick="setAmount(75)">$75</button>
+          <button type="button" class="amount-chip" onclick="setAmount(100)">$100</button>
+          <button type="button" class="amount-chip" onclick="setAmount(150)">$150</button>
+        </div>
+        <span class="field-error" id="chargeErrAmount"></span>
+      </div>
+
+      <div class="form-group full-width">
+        <label class="form-label" for="chargeDescription">
+          <i class="fas fa-file-alt"></i> Description
+        </label>
+        <input type="text" id="chargeDescription" class="form-control"
+               placeholder="e.g. Monthly internet service — Account #12345" />
+      </div>
+
+      <div class="form-group full-width">
+        <label class="form-label" for="chargeAgent">
+          <i class="fas fa-headset"></i> Agent
+        </label>
+        <input type="text" id="chargeAgent" class="form-control" placeholder="Your name" />
+      </div>
+
+      <div class="modal-actions modal-actions-right">
+        <button type="button" class="btn btn-secondary" onclick="closeChargeModal()">Cancel</button>
+        <button type="submit" class="btn btn-primary" id="chargeSubmit">
+          <i class="fas fa-bolt"></i>
+          <span id="chargeSubmitText">Charge card</span>
+        </button>
+      </div>
+    </form>
+  </div>
+</div>
+
+<!-- History Modal -->
+<div class="modal-overlay hidden" id="historyModal">
+  <div class="modal-card modal-form">
+    <button type="button" class="modal-close" onclick="closeHistoryModal()" aria-label="Close">
+      <i class="fas fa-times"></i>
+    </button>
+    <h2><i class="fas fa-clock-rotate-left"></i> Charge History</h2>
+    <div class="charge-target" id="historyTarget"></div>
+    <div id="historyBody" class="charge-history"></div>
+    <div class="modal-actions modal-actions-right">
+      <button type="button" class="btn btn-secondary" onclick="closeHistoryModal()">Close</button>
+    </div>
+  </div>
+</div>
+{% endblock %}
+
+{% block extra_scripts %}
+<script src="/static/js/data_center.js"></script>
+{% endblock %}

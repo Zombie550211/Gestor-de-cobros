@@ -10,6 +10,7 @@ from app.services.payment_service import (
     expire_stale_payments,
     get_all_payments,
     get_dashboard_stats,
+    get_saved_cards,
 )
 from app.utils.auth import require_admin_page
 
@@ -40,9 +41,30 @@ def _register_filters():
             return f"({digits[:3]}) {digits[3:6]}-{digits[6:]}"
         return v
 
+    def card_brand_fmt(v):
+        """visa -> Visa, amex -> Amex, mastercard -> Mastercard."""
+        if not v:
+            return "Card"
+        special = {"amex": "Amex", "mastercard": "Mastercard", "unionpay": "UnionPay"}
+        return special.get(v.lower(), v.replace("_", " ").title())
+
+    def card_icon_fmt(v):
+        """Clase de Font Awesome para la marca de la tarjeta."""
+        icons = {
+            "visa": "fab fa-cc-visa",
+            "mastercard": "fab fa-cc-mastercard",
+            "amex": "fab fa-cc-amex",
+            "discover": "fab fa-cc-discover",
+            "diners": "fab fa-cc-diners-club",
+            "jcb": "fab fa-cc-jcb",
+        }
+        return icons.get((v or "").lower(), "fas fa-credit-card")
+
     templates.env.filters["currency"] = currency
     templates.env.filters["dt"] = dt_fmt
     templates.env.filters["phone"] = phone_fmt
+    templates.env.filters["card_brand"] = card_brand_fmt
+    templates.env.filters["card_icon"] = card_icon_fmt
 
 
 _register_filters()
@@ -66,6 +88,23 @@ async def payment_list(request: Request, db: Session = Depends(get_db)):
     return templates.TemplateResponse(
         "payment_list.html",
         {"request": request, "payments": payments, "active_page": "payments"},
+    )
+
+
+@router.get("/data-center", response_class=HTMLResponse)
+async def data_center(request: Request, db: Session = Depends(get_db)):
+    cards = get_saved_cards(db)
+    total_collected = sum(c["total_collected"] for c in cards)
+    total_charges = sum(c["charges_count"] for c in cards)
+    return templates.TemplateResponse(
+        "data_center.html",
+        {
+            "request": request,
+            "cards": cards,
+            "total_collected": total_collected,
+            "total_charges": total_charges,
+            "active_page": "data_center",
+        },
     )
 
 

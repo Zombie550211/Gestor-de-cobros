@@ -15,6 +15,33 @@
   // Saved payment URL for the success modal
   let lastPaymentUrl = '';
 
+  // Datos precargados desde el Data Center: el agente no vuelve a escribirlos.
+  (function prefillFromQuery() {
+    const params = new URLSearchParams(window.location.search);
+    const fields = {
+      name: nameEl,
+      email: emailEl,
+      phone: phoneEl,
+      agent: agentEl,
+    };
+    let prefilled = false;
+
+    Object.entries(fields).forEach(([param, el]) => {
+      const value = params.get(param);
+      if (value && el) {
+        el.value = value;
+        prefilled = true;
+      }
+    });
+
+    if (prefilled) {
+      alertBox.className = 'alert alert-success';
+      alertBox.textContent =
+        'Customer details loaded from Data Center. Set the amount and send — once they pay, their card is saved for future charges.';
+      amountEl.focus();
+    }
+  })();
+
   // Live SMS preview
   function updatePreview() {
     const name = nameEl.value.trim();

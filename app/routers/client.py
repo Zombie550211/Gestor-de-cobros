@@ -9,6 +9,7 @@ from sqlalchemy.orm import Session
 from app.config import settings
 from app.database import get_db
 from app.models.payment_link import PaymentLink, PaymentStatus
+from app.services.payment_service import save_card_from_payment
 from app.services.stripe_service import retrieve_payment_intent_status
 
 router = APIRouter()
@@ -96,6 +97,9 @@ async def payment_result(request: Request, token: str, db: Session = Depends(get
             payment.status = PaymentStatus.PAID.value
             payment.paid_at = datetime.utcnow()
             db.commit()
+            # Respaldo por si el webhook no está configurado: guarda la tarjeta
+            # para que quede disponible en el Data Center.
+            await save_card_from_payment(payment, db)
             return templates.TemplateResponse(
                 "payment_success.html", {"request": request, "payment": payment}
             )

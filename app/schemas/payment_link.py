@@ -44,6 +44,23 @@ class PaymentLinkCreate(BaseModel):
         return v
 
 
+class RechargeCreate(BaseModel):
+    """Cobro repetido sobre una tarjeta ya guardada (Data Center)."""
+
+    amount: Decimal
+    description: Optional[str] = None
+    agent_name: Optional[str] = None
+
+    @field_validator("amount")
+    @classmethod
+    def amount_in_range(cls, v: Decimal) -> Decimal:
+        if v <= 0:
+            raise ValueError("Amount must be positive")
+        if v > Decimal("50000"):
+            raise ValueError("Amount cannot exceed $50,000")
+        return v
+
+
 class ActivityUpdate(BaseModel):
     status: Optional[str] = None
     time_spent: Optional[float] = None

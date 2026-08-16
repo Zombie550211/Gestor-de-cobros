@@ -4,10 +4,14 @@ from contextlib import asynccontextmanager
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles
-from sqlalchemy import text
+from sqlalchemy import inspect, text
 
 from app.config import settings
 from app.database import Base, engine
+
+# Importar los modelos registra sus tablas en Base.metadata (create_all y las
+# migraciones ligeras recorren esa lista).
+from app.models import charge, payment_link  # noqa: F401
 from app.routers import admin, api, auth, client, webhooks
 
 _BASE_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
@@ -32,6 +36,36 @@ def _run_light_migrations():
 
     elif dialect == "sqlite":
         _migrate_sqlite()
+
+    _add_missing_columns()
+
+
+def _add_missing_columns():
+    """Agrega las columnas opcionales del modelo que aún no existan en la base.
+
+    ALTER TABLE ... ADD COLUMN se comporta igual en PostgreSQL y SQLite mientras
+    la columna sea nullable, así que las columnas nuevas (por ejemplo las de la
+    tarjeta guardada) no requieren reconstruir la tabla.
+    """
+    inspector = inspect(engine)
+
+    with engine.begin() as conn:
+        for table in Base.metadata.sorted_tables:
+            if not inspector.has_table(table.name):
+                continue  # create_all ya la creó con el esquema al día
+
+            existing = {c["name"] for c in inspector.get_columns(table.name)}
+            for col in table.columns:
+                if col.name in existing or not col.nullable:
+                    continue
+                type_sql = col.type.compile(engine.dialect)
+                try:
+                    conn.execute(
+                        text(f"ALTER TABLE {table.name} ADD COLUMN {col.name} {type_sql}")
+                    )
+                    print(f"[migration] columna agregada: {table.name}.{col.name}")
+                except Exception as e:  # noqa: BLE001
+                    print(f"[migration] omitido {table.name}.{col.name}: {e}")
 
 
 def _migrate_sqlite():

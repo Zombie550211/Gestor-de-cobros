@@ -355,6 +355,8 @@ a { text-decoration: none; color: inherit; }
 .badge-expired   { background: rgba(148,163,184,0.12); color: #64748B; }
 .badge-abandoned { background: rgba(100,116,132,0.12); color: #64748B; }
 .badge-cancelled { background: rgba(30,41,59,0.12); color: #334155; }
+.badge-succeeded { background: rgba(16,185,129,0.12); color: #059669; }
+.badge-requires_action { background: rgba(245,158,11,0.12); color: #D97706; }
 
 /* ============================================================
    BUTTONS
@@ -485,6 +487,94 @@ select.form-control { cursor: pointer; }
 .modal-actions {
   display: flex; gap: 10px; justify-content: center; flex-wrap: wrap;
 }
+.modal-actions-right { justify-content: flex-end; }
+
+/* Variante con formulario: alineada a la izquierda y con botón de cierre */
+.modal-card.modal-form {
+  text-align: left; position: relative;
+  padding: 28px; max-width: 520px;
+  max-height: 88vh; overflow-y: auto;
+}
+.modal-card.modal-form h2 {
+  font-size: 1.2rem; margin-bottom: 18px;
+  display: flex; align-items: center; gap: 10px;
+}
+.modal-card.modal-form h2 i { color: var(--primary-light); }
+.modal-close {
+  position: absolute; top: 16px; right: 16px;
+  width: 30px; height: 30px; border: none; cursor: pointer;
+  background: var(--gray-100); color: var(--text-sub);
+  border-radius: 50%; font-size: 0.85rem;
+  display: flex; align-items: center; justify-content: center;
+  transition: background 0.15s, color 0.15s;
+}
+.modal-close:hover { background: var(--gray-200); color: var(--text-main); }
+
+/* ============================================================
+   DATA CENTER
+   ============================================================ */
+.card-cell { display: flex; align-items: center; gap: 11px; }
+.card-brand-icon { font-size: 1.7rem; color: var(--primary); flex-shrink: 0; }
+.card-cell-body { display: flex; flex-direction: column; gap: 2px; }
+.card-number {
+  font-family: monospace; font-weight: 600;
+  letter-spacing: 0.5px; color: var(--text-main);
+}
+.card-meta { font-size: 0.75rem; color: var(--text-sub); }
+.card-expired-tag {
+  margin-left: 4px; padding: 1px 6px; border-radius: 4px;
+  background: rgba(239,68,68,0.12); color: var(--danger);
+  font-size: 0.65rem; font-weight: 700; letter-spacing: 0.03em;
+}
+.card-status {
+  display: inline-flex; align-items: center; gap: 5px;
+  font-size: 0.7rem; font-weight: 600; margin-top: 3px;
+}
+.card-status-ok { color: var(--success); cursor: help; }
+.card-status-locked { color: var(--gray-400); cursor: help; }
+
+
+/* Tarjeta objetivo dentro del modal */
+.charge-target-card {
+  display: flex; align-items: center; gap: 12px;
+  background: var(--gray-100); border: 1px solid var(--gray-200);
+  border-radius: var(--radius); padding: 12px 14px; margin-bottom: 18px;
+}
+.charge-target-card i { font-size: 1.4rem; color: var(--primary-light); }
+.charge-target-card div { display: flex; flex-direction: column; }
+.charge-target-card strong { font-size: 0.92rem; }
+.charge-target-card span { font-size: 0.8rem; color: var(--text-sub); }
+
+.quick-amounts { display: flex; gap: 7px; flex-wrap: wrap; margin-top: 8px; }
+.amount-chip {
+  padding: 5px 13px; border-radius: 20px; cursor: pointer;
+  background: var(--white); border: 1.5px solid var(--gray-200);
+  font-size: 0.8rem; font-weight: 600; color: var(--text-sub);
+  transition: all 0.15s;
+}
+.amount-chip:hover {
+  border-color: var(--primary-light); color: var(--primary-light);
+  background: rgba(0,116,204,0.06);
+}
+
+/* Historial de cobros */
+.charge-history { display: flex; flex-direction: column; gap: 10px; margin-bottom: 20px; }
+.history-item {
+  border: 1px solid var(--gray-200); border-radius: var(--radius);
+  padding: 12px 14px;
+}
+.history-main {
+  display: flex; align-items: center; justify-content: space-between;
+  gap: 10px; margin-bottom: 4px;
+}
+.history-amount { font-size: 1.05rem; font-weight: 700; }
+.history-meta { font-size: 0.76rem; color: var(--text-sub); }
+.history-desc { font-size: 0.83rem; color: var(--text-main); margin-top: 5px; }
+.history-note {
+  margin-top: 7px; padding: 7px 10px; border-radius: var(--radius-sm);
+  background: rgba(239,68,68,0.08); color: var(--danger); font-size: 0.79rem;
+}
+.history-empty { text-align: center; color: var(--gray-400); padding: 24px 0; font-size: 0.88rem; }
 
 /* ============================================================
    PAYMENT PAGE (CLIENT)
