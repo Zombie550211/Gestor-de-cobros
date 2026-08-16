@@ -1,25 +1,47 @@
 """
 Obtener el GMAIL_REFRESH_TOKEN (ejecutar UNA sola vez en tu PC).
 
-Pasos:
-  1. Descarga el archivo de credenciales OAuth desde Google Cloud
-     (tipo "Aplicacion de escritorio") y guardalo en esta carpeta
-     con el nombre:  client_secret.json
-  2. Instala la libreria (solo para este paso):
-        pip install google-auth-oauthlib
-  3. Ejecuta:
-        python get_gmail_token.py
-  4. Se abrira tu navegador -> inicia sesion con tu Gmail -> "Permitir".
-  5. Copia los 3 valores que se imprimen y ponlos en Render y/o en tu .env.
+Instala la libreria (solo para este paso):
+    pip install google-auth-oauthlib
+
+Luego ejecuta:
+    python get_gmail_token.py
+
+Te pedira el Client ID y el Client Secret (los copias de Google Cloud,
+en "APIs y servicios" -> "Credenciales" -> tu cliente OAuth).
+Se abrira el navegador -> inicia sesion con tu Gmail -> "Permitir".
+Al final imprime los 3 valores para poner en Render y/o en tu .env.
 """
+import os
+
 from google_auth_oauthlib.flow import InstalledAppFlow
 
 # Permiso minimo: solo enviar correos (no leer).
 SCOPES = ["https://www.googleapis.com/auth/gmail.send"]
 
 
+def _flow_from_inputs():
+    client_id = input("Pega tu Client ID y presiona Enter:\n").strip()
+    client_secret = input("Pega tu Client Secret y presiona Enter:\n").strip()
+    config = {
+        "installed": {
+            "client_id": client_id,
+            "client_secret": client_secret,
+            "auth_uri": "https://accounts.google.com/o/oauth2/auth",
+            "token_uri": "https://oauth2.googleapis.com/token",
+            "redirect_uris": ["http://localhost"],
+        }
+    }
+    return InstalledAppFlow.from_client_config(config, SCOPES)
+
+
 def main():
-    flow = InstalledAppFlow.from_client_secrets_file("client_secret.json", SCOPES)
+    # Si existe client_secret.json lo usa; si no, pide los datos a mano.
+    if os.path.exists("client_secret.json"):
+        flow = InstalledAppFlow.from_client_secrets_file("client_secret.json", SCOPES)
+    else:
+        flow = _flow_from_inputs()
+
     creds = flow.run_local_server(port=0)
 
     print("\n=========== COPIA ESTOS 3 VALORES ===========\n")
