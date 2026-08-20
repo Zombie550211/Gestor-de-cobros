@@ -14,6 +14,9 @@ token.json
 *.sqlite3
 spectrum_payments.db
 
+# Respaldos de datos reales (traen email, telefono, IP y client_secret de Stripe)
+backup_payment_links_*.json
+
 # Python
 __pycache__/
 *.py[cod]
