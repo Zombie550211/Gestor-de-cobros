@@ -71,14 +71,18 @@ async def create_payment(data: PaymentLinkCreate, db: Session) -> PaymentLink:
     payment_url = f"{settings.APP_URL}/pay/{token}"
     expires_in_text = format_expires_in(data.expires_in_minutes)
 
-    # Canal principal: correo
-    email_sent = send_payment_email(
-        to_email=data.customer_email,
-        customer_name=data.customer_name,
-        amount=float(data.amount),
-        payment_url=payment_url,
-        expires_in=expires_in_text,
-    )
+    # Canal principal: correo (solo si se proporcionó un email).
+    # Cuando el link se crea solo con el monto, no hay correo que enviar: el
+    # agente copia el link y lo comparte por el medio que prefiera.
+    email_sent = False
+    if data.customer_email:
+        email_sent = send_payment_email(
+            to_email=data.customer_email,
+            customer_name=data.customer_name,
+            amount=float(data.amount),
+            payment_url=payment_url,
+            expires_in=expires_in_text,
+        )
 
     # Canal secundario: SMS (solo si hay teléfono y Twilio configurado)
     sms_sent = False

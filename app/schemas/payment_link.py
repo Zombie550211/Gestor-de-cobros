@@ -7,13 +7,35 @@ from pydantic import BaseModel, ConfigDict, EmailStr, field_validator
 
 
 class PaymentLinkCreate(BaseModel):
-    customer_name: str
-    customer_email: EmailStr
+    # Solo el monto y la expiración son obligatorios al crear el link.
+    # El resto queda opcional: cuando el link se crea desde el Data Center,
+    # estos datos llegan precargados para poder guardar la tarjeta.
+    customer_name: str = "Cliente"
+    customer_email: Optional[EmailStr] = None
     phone_number: Optional[str] = None
     amount: Decimal
-    description: str
+    description: str = "Pago"
     expires_in_minutes: int
     agent_name: str = "Agent"
+
+    @field_validator("customer_name")
+    @classmethod
+    def default_name(cls, v: str) -> str:
+        v = (v or "").strip()
+        return v or "Cliente"
+
+    @field_validator("description")
+    @classmethod
+    def default_description(cls, v: str) -> str:
+        v = (v or "").strip()
+        return v or "Pago"
+
+    @field_validator("customer_email", mode="before")
+    @classmethod
+    def blank_email_to_none(cls, v):
+        if v is None or (isinstance(v, str) and not v.strip()):
+            return None
+        return v
 
     @field_validator("amount")
     @classmethod

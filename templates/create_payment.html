@@ -5,42 +5,20 @@
 {% block content %}
 <div class="page-header">
   <h1>Create Payment Request</h1>
-  <p class="page-subtitle">Generate a secure payment link and send it via email</p>
+  <p class="page-subtitle">Set the amount and generate a secure payment link</p>
 </div>
 
 <div class="form-card">
   <div id="alert-box" class="alert hidden"></div>
 
   <form id="paymentForm" novalidate>
-    <div class="form-row">
-      <div class="form-group">
-        <label class="form-label" for="customer_name">
-          <i class="fas fa-user"></i> Customer Name <span class="required">*</span>
-        </label>
-        <input type="text" id="customer_name" name="customer_name" class="form-control"
-               placeholder="John Smith" required autocomplete="off" />
-        <span class="field-error" id="err-name"></span>
-      </div>
-      <div class="form-group">
-        <label class="form-label" for="customer_email">
-          <i class="fas fa-envelope"></i> Customer Email <span class="required">*</span>
-        </label>
-        <input type="email" id="customer_email" name="customer_email" class="form-control"
-               placeholder="customer@email.com" required autocomplete="off" />
-        <span class="field-error" id="err-email"></span>
-      </div>
-    </div>
-
-    <div class="form-row">
-      <div class="form-group">
-        <label class="form-label" for="phone_number">
-          <i class="fas fa-phone"></i> Phone Number (USA) <span style="color:#9ca3af">(optional)</span>
-        </label>
-        <input type="tel" id="phone_number" name="phone_number" class="form-control"
-               placeholder="(555) 000-0000" autocomplete="off" />
-        <span class="field-error" id="err-phone"></span>
-      </div>
-    </div>
+    <!-- Campos ocultos: se rellenan solos cuando el link se crea desde el
+         Data Center, para asociar la tarjeta al cliente. En el uso normal
+         quedan vacíos y el backend aplica valores por defecto. -->
+    <input type="hidden" id="customer_name" name="customer_name" value="" />
+    <input type="hidden" id="customer_email" name="customer_email" value="" />
+    <input type="hidden" id="phone_number" name="phone_number" value="" />
+    <input type="hidden" id="agent_name" name="agent_name" value="" />
 
     <div class="form-row">
       <div class="form-group">
@@ -50,7 +28,7 @@
         <div class="input-prefix-wrap">
           <span class="input-prefix">$</span>
           <input type="number" id="amount" name="amount" class="form-control with-prefix"
-                 placeholder="0.00" step="0.01" min="1" required />
+                 placeholder="0.00" step="0.01" min="1" required autofocus />
         </div>
         <span class="field-error" id="err-amount"></span>
       </div>
@@ -59,7 +37,6 @@
           <i class="fas fa-clock"></i> Link Expires In <span class="required">*</span>
         </label>
         <select id="expires_in_minutes" name="expires_in_minutes" class="form-control" required>
-          <option value="">— Select expiry —</option>
           <option value="15">15 minutes</option>
           <option value="30">30 minutes</option>
           <option value="60" selected>1 hour</option>
@@ -72,40 +49,12 @@
       </div>
     </div>
 
-    <div class="form-group full-width">
-      <label class="form-label" for="description">
-        <i class="fas fa-file-alt"></i> Description <span class="required">*</span>
-      </label>
-      <textarea id="description" name="description" class="form-control" rows="3"
-                placeholder="e.g. Monthly internet service — Account #12345" required></textarea>
-      <span class="field-error" id="err-desc"></span>
-    </div>
-
-    <div class="form-group full-width">
-      <label class="form-label" for="agent_name">
-        <i class="fas fa-headset"></i> Agent Name
-      </label>
-      <input type="text" id="agent_name" name="agent_name" class="form-control"
-             placeholder="Your name" value="" />
-    </div>
-
-    <div class="sms-preview" id="smsPreview">
-      <div class="sms-header"><i class="fas fa-sms"></i> SMS Preview</div>
-      <div class="sms-bubble">
-        <p><strong>Secure Payment</strong></p>
-        <p>Hello <span id="prev-name">John</span>,</p>
-        <p>You have a secure payment request.</p>
-        <p>Amount: <strong id="prev-amount">$0.00</strong></p>
-        <p>Pay securely:<br /><span class="sms-link">https://pay.yourdomain.com/pay/XXXXXX</span></p>
-        <p>This payment link expires in <span id="prev-expires">1 hour</span>.</p>
-        <p>Thank you.</p>
-      </div>
-    </div>
+    <div id="customerHint" class="alert hidden"></div>
 
     <div class="form-actions">
       <button type="submit" class="btn btn-primary btn-lg" id="submitBtn">
-        <i class="fas fa-paper-plane"></i>
-        <span>Generate &amp; Send Link</span>
+        <i class="fas fa-link"></i>
+        <span>Generate Link</span>
       </button>
     </div>
   </form>
@@ -116,7 +65,7 @@
   <div class="modal-card">
     <div class="modal-icon success"><i class="fas fa-check-circle"></i></div>
     <h2>Payment Link Created!</h2>
-    <p>The link has been sent via email to the customer.</p>
+    <p>Copy the link and send it to the customer.</p>
     <div class="modal-url" id="modal-url"></div>
     <div class="modal-actions">
       <button class="btn btn-outline" onclick="copyLink()"><i class="fas fa-copy"></i> Copy Link</button>
